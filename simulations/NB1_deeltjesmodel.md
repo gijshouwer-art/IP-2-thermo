@@ -67,8 +67,8 @@ plt.plot(t,x_1,'r.', markersize=1, label='fietser 1')
 plt.plot(t,x_2,'b.', markersize=1, label='fietser 2')
 
 plt.show()
-
-
+print(x_2)
+print(x_1)
 ```
 
 Wat op zou kunnen vallen is dat de snelheid in een cel constant gehouden wordt ($x_i = v_i\cdot\Delta t$), terwijl de snelheid tijdens het tijdsinterval $\Delta t$ toeneemt. De oplossing is dus een benadering van de exacte oplossing, maar door deze methode (Euler explicit forward), moeten we wel voorzichtig zijn met de grootte van het tijdsinterval.
@@ -81,7 +81,9 @@ Maak het tijdsinterval $dt$ groter en vergelijk de afgelegde weg in de tien seco
 <!-- Jouw antwoord hier  -->
 
 ```python
-%reset -f  #clears memory as we don't need it further down 
+  #clears memory as we don't need it further down  
+%reset -f 
+#de afstand wordt korter naarmaten de dt groter wordt dit komt doordat de sprongen korter worden en dus de nieuwe snelheid eerder begint
 ```
 
 ## Naar een deeltjesmodel
@@ -97,6 +99,8 @@ Een *class* is een blauwdruk voor het creëren van objecten (zoals deeltjes, ato
 # Merk op dat de class zelf geen deeltje is! 
 # Een object dat tot een bepaalde class behoort, wordt een instant van die class genoemd. 
 # Je kunt meerdere instants van een class hebben.
+import numpy as np
+import matplotlib.pyplot as plt
 
 class ParticleClass:
     def __init__(self, m, v, r, R):
@@ -229,7 +233,28 @@ En als je wilt gaan voor een uitdaging:
 ```
 
 ```python
-### YOUR CODE HERE ###
+import random
+x_waardes = np.arange(10)
+class ParticleClass:
+    def __init__(self, m, v, r, R):
+        self.m = m
+        self.v = np.array(v, dtype=float)
+        self.r = np.array(r, dtype=float)
+        self.R = np.array(R, dtype=float)
+
+    def update_position(self, dt):
+        self.r += self.v * dt
+
+particles = [ParticleClass(1, [random.uniform(-5,5), random.uniform(-1,1)], [x_waardes[i], 0], 1) for i in range(10)]
+colors = plt.cm.tab10(range(10))
+for i, p in enumerate(particles):
+    start = p.r.copy()      
+    p.update_position(1.0) 
+    
+    plt.plot([start[0], p.r[0]], [start[1], p.r[1]], '-', color=colors[i])
+    plt.scatter(*start, color=colors[i], marker='o') 
+    plt.scatter(*p.r, color=colors[i], marker='x')  
+plt.show()
 ```
 
 Onze simulaties worden snel “zwaar”. Er moeten veel berekeningen gedaan worden en dat kost nu eenmaal tijd. Nu is het wel zo dat sommige berekeningen meer tijd kosten dan anderen. Om te kijken of een stukje code geoptimaliseerd kan worden, moeten we een timer maken. Dat kan met onderstaande code:
@@ -238,18 +263,36 @@ Onze simulaties worden snel “zwaar”. Er moeten veel berekeningen gedaan word
 import time
 import numpy as np
 
-start = time.time()
+for i in range(0,10):
+    start = time.time()
 
-array = np.array([])
-N = int(1e5)
+    array = np.array([])
+    N = int(1e5)
 
-for i in range(N):
-    array = np.append(array,np.random.rand(1))
+    for i in range(N):
+        array = np.append(array,np.random.rand(1))
+    eind = time.time()
+    lengte = np.append(lengte, (eind - start))
+len1= sum(lengte)/10
+print("Dit kostte ", len1, "seconde!")
 
-eind = time.time()
-lengte = eind - start
+lengte = np.array([])
 
-print("Dit kostte ", lengte, "seconde!")
+for i in range(0,10):
+    start = time.time()
+
+    array = np.array([])
+    N = int(1e5)
+
+    #for i in range(N):
+    array = np.append(array,np.random.rand(1,N))
+    eind = time.time()
+    lengte = np.append(lengte, (eind - start))
+len2= sum(lengte)/10
+print("Dit kostte ", len2, "seconde!")
+keer_korter = len1/len2
+keer_korter = float(keer_korter)
+print(keer_korter,"keer sneller")
 ```
 
 Idealiter draaien we de bovenstaande code een aantal keer zodat we een goede schatting hebben van de rekentijd.
@@ -268,12 +311,9 @@ Met de MyST extentie in jupyterlab kun je gebruik maken van [eval](https://mystm
 ```
 
 ```{solution} ex-intro-3
-De runtime is {eval}`<naam variabele>` korter.
+De runtime is {eval}`keer_korter` korter.
 ```
 
-```python
-
-```
 
 ## Aan de slag met deeltjes
 Zoom je heel ver in, dan zie je deeltjes rond vliegen.
@@ -432,7 +472,18 @@ Controleer je eigen antwoord door de functie hierboven even te vervangen door de
 def update(frame):
     particle.update_position()
     dot.set_data([particle.r[0]], [particle.r[1]])
+
+    if particle.r[0] > 10:
+        particle.r[0] = -10
+    elif particle.r[0] < -10:
+        particle.r[0] = 10
+
+    if particle.r[1] > 10:
+        particle.r[1] = -10
+    elif particle.r[1] < -10:
+        particle.r[1] = 10
 ### YOUR CODE HERE ###
+
     return dot,         
 ```
 
@@ -448,6 +499,11 @@ Test wederom je code door de vernieuwde functie hierboven te plakken.
 def update(frame):
     particle.update_position()
     dot.set_data([particle.r[0]], [particle.r[1]])
+    if particle.r[0] >= 10 or particle.r[0] <= -10:
+        particle.v[0] *= -1
+
+    if particle.r[1] >= 10 or particle.r[1] <= -10:
+        particle.v[1] *= -1
 ### YOUR CODE HERE ###
     return dot,
 ```
