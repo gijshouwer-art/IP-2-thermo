@@ -222,8 +222,8 @@ Schrijf een functie die de temperatuur van het gas in onze simulatie bepaalt:
 
 ```python tags=["NB3_tempfun"]
 def temperature(particles) -> float:
-    temp = 0.0 
-    ### YOUR CODE HERE ###
+    # 2D: f=2, dus kT = <Ekin> (simulatie-eenheden, k=1)
+    temp = np.mean([p.kin_energy for p in particles])
     return temp
 ```
 
@@ -246,15 +246,17 @@ create_particles(particles)
 for i in range(100):
     take_time_step(particles)
     # vastleggen van temperatuur per tijdstap
-    ### YOUR CODE HERE ###
+    temperatures[i] = temperature(particles)
 
 plt.figure()
 plt.xlabel('Time')
 plt.ylabel('Temperature')
 # plotten van tijd tegen temperatuur
-### YOUR CODE HERE ###
+plt.plot(times, temperatures)
 plt.show()
 ```
+
+De temperatuur blijft constant: botsingen zijn elastisch, dus de totale kinetische energie verandert niet.
 
 <!-- #region tags=[] -->
 ```{exercise}
@@ -265,6 +267,23 @@ In een vorige module heb je de vermenigvuldigingsfactoren en eenheden bij de con
 - Breid de berekening uit, zodat de eenheden kloppen bij het model dat we probeerden weer te geven.
 ```
 <!-- #endregion -->
+
+Schaalfactoren uit NB2: oppervlak per deeltje $(1.6\,\mathrm{nm})^2$ en 100/40 = 2.5 eenheden$^2$ per deeltje, dus 1 lengte-eenheid ≈ 1 nm. Snelheid: $v=\sqrt{2kT/m}\approx 4\cdot10^2$ m/s voor N$_2$ bij 293 K. Massa: 1 N$_2$-molecuul.
+
+```python
+k_B = 1.380649e-23
+M_UNIT = 28 * 1.66e-27          # kg (N2)
+V_UNIT = np.sqrt(2 * k_B * 293 / M_UNIT)  # m/s, ~417
+L_UNIT = 1.6e-9 / np.sqrt(BOX_SIZE_0**2 / N)  # m, ~1 nm
+T_UNIT = L_UNIT / V_UNIT        # s per tijdeenheid
+E_UNIT = M_UNIT * V_UNIT**2     # J
+
+plt.figure()
+plt.xlabel('Tijd [ps]')
+plt.ylabel('Temperatuur [K]')
+plt.plot(times * DT * T_UNIT * 1e12, temperatures * E_UNIT / k_B)
+plt.show()
+```
 
 ## Druk
 
@@ -347,7 +366,10 @@ particles = []
 pressures = np.zeros(100, dtype=float)
 times = np.linspace(1, 100, 100)
 
-### YOUR CODE HERE ###
+create_particles(particles)
+for i in range(100):
+    take_time_step(particles)
+    pressures[i] = pressure
 
 plt.figure()
 plt.xlabel('Time [step]')
@@ -358,6 +380,8 @@ plt.plot(times, pressures, '-r')
 plt.show()
 
 ```
+
+Verklaring: met maar 40 deeltjes botst er per tijdstap meestal geen enkel deeltje met de wand (druk 0), en soms wel een (piek). De druk is dus heel ruizig.
 
 <!-- #region tags=[] -->
 ## Verbeteren van code: middelen
@@ -375,10 +399,26 @@ Zet je initiële waarden weer terug.
 ```
 <!-- #endregion -->
 
-```python tags=[]
-### YOUR CODE HERE ###
+Volume moet ook 10x groter, anders wordt de dichtheid (en dus de druk) 10x hoger. In 2D: zijde $\times\sqrt{10}$.
 
+```python tags=[]
+N, BOX_SIZE_0 = 400, 10 * np.sqrt(10)
+
+create_particles(particles)
+for i in range(100):
+    take_time_step(particles)
+    pressures[i] = pressure
+
+plt.figure()
+plt.xlabel('Time [step]')
+plt.ylabel('Pressure [a.u.]')
+plt.plot(times, pressures, '-r')
+plt.show()
+
+N, BOX_SIZE_0 = 40, 10   # terugzetten
 ```
+
+Meer pieken, dus gladder, maar het duurt veel langer (botsingscheck schaalt met $N^2$).
 
 Een goedkoper alternatief bestaat uit het middelen van de druk over de tijd.
 Fysisch is daar geen echte reden voor, maar ook meetinstrumenten in het laboratorium bepalen hun meetwaarde gedurende een tijdsinterval om hun ruis te verlagen. 
@@ -424,9 +464,16 @@ pressures = np.zeros(N_steps, dtype=float)
 times = np.linspace(1, N_steps, N_steps)
 
 create_particles(particles)
+pressure = 0.0
+for i in range(N_steps):
+    take_time_step(particles)
+    pressures[i] = pressure
 
-### YOUR CODE HERE ###
-
+plt.figure()
+plt.xlabel('Time [step]')
+plt.ylabel('Pressure [a.u.]')
+plt.plot(times, pressures, '-r')
+plt.show()
 ```
 
 Met de middeling kun je beter zien wat de gemiddelde waarde voor de druk in dit systeem is. Als dit voor jouw simulatie lastig is kan je de factor `alpha` aanpassen in de functie 'handle_walls`, zodat je over een langere periode het gemiddelde neemt. Hou daarbij wel rekening met de eis in [bovenstaande formule](int_norm)
@@ -437,7 +484,12 @@ We kunnen de gevonden druk nu wel uitdrukken in SI-eenheden met behulp van de vo
 ```
 
 ```{solution} ex-druktemp-7
-### YOUR CODE HERE ###
+De simulatie is 2D, dus de druk is kracht per lengte (N/m) en niet per oppervlak (Pa). Omrekenen geeft $\approx 2\cdot10^{-3}$ N/m, en dat is geen bar. Pas als je zelf een "diepte" kiest (bv. 1.6 nm) kom je op Pa uit (~13 bar), maar dat is een keuze, geen uitkomst van het model. Dat het dan nog niet precies 10 bar is komt door de eindige straal van de deeltjes (ze nemen ruimte in), weinig deeltjes en ruis.
+```
+
+```python
+print(np.mean(pressures[100:]) * E_UNIT / L_UNIT**2, 'N/m')
+print(np.mean(pressures[100:]) * E_UNIT / L_UNIT**2 / 1.6e-9 / 1e5, 'bar (met diepte 1.6 nm)')
 ```
 
 
@@ -449,7 +501,7 @@ Leg op basis van de vormen die je ziet en de bijbehorende wiskunde uit dat dit e
 ```
 
 ```{solution} ex-druktemp-8
-### YOUR CODE HERE ###
+Uitschrijven geeft $P_i = \alpha\sum_k (1-\alpha)^k P_{i-k}$. Oudere waarden tellen mee met een gewicht dat exponentieel afneemt ($(1-\alpha)^k$), en het gemiddelde schuift elke stap mee op. In de grafiek zie je na elke piek een exponentieel uitdovende staart.
 ```
 
 
@@ -479,8 +531,13 @@ Controleer of je uitkomst overeenkomt met de theorie en verifieer hiermee de cod
 ```
 
 ```python
-### YOUR CODE HERE ###
+v2 = np.mean([p.v @ p.v for p in particles])
+P_theorie = 1.0 * N / BOX_SIZE_0**2 * v2 / 2
+P_sim = np.mean(pressures[100:])   # eerste stappen weg (inloop van gemiddelde)
+print(P_sim, P_theorie)
 ```
+
+Simulatie geeft ongeveer 0.27, theorie 0.20. Zelfde orde, dus de code werkt. De simulatie zit hoger omdat de deeltjes een straal hebben: de wand "begint" al op afstand $R$ (effectieve doos $9.4^2$) en de deeltjes nemen zelf ruimte in (zoals bij Van der Waals). Met kleinere `RADIUS` komt het dichter bij de theorie.
 
 In [de formule voor de tweedimensionale druk](2d_pressure) kan je de structuur van de ideale gaswet herkennen. 
 
@@ -492,8 +549,13 @@ Herleid dezelfde formule af voor het driedimensionale geval. Laat zien welke rel
 
 
 ```{solution} ex-druktemp9b
-Geef hier de relatie tussen de constanten...
-### YOUR CODE HERE ###
+Kubus met ribbe $l$, $V=l^3$. Een deeltje botst elke $2l/v_x$ op dezelfde wand, met stoot $2mv_x$. Kracht op de wand: $\sum 2mv_{x,i}\cdot v_{x,i}/(2l) = \frac{m}{l}\sum v_{x,i}^2$. Druk: delen door $A=l^2$:
+
+$\left<P\right> = \frac{mN}{V}\left<v_x^2\right> = \frac{mN}{V}\frac{\left<v^2\right>}{3}$ (want in 3D $\left<v_x^2\right>=\left<v^2\right>/3$).
+
+Dus $PV = \frac{2}{3}N\cdot\frac12 m\left<v^2\right> = \frac23 N \cdot \frac32 kT = NkT$.
+
+Vergelijk met $PV = nRT$: $nR = Nk$, dus $R = N_A k$ (gasconstante = Avogadro × Boltzmann).
 ```
 
 
@@ -512,22 +574,38 @@ Je ziet dat de druk een statistisch bepaalde grootheid is die met de tijd variee
 - Bepaal de breedte van de verdeling van drukwaardes met een eigen gekozen definitie.
 - Verhoog het aantal deeltjes met een factor twee en herhaal je berekening.
 - Schat hieruit de statistische variatie in de druk bij een volume met $10^{23}$ deeltjes.
-
-
-```python
-
 ```
 
-```python
-### YOUR CODE HERE ###
-```
+Breedte = standaarddeviatie van de (gemiddelde) druk. Dubbel aantal deeltjes → oppervlak ook dubbel (zijde $\times\sqrt2$), zodat de dichtheid gelijk blijft.
 
 ```python
+def run(n, box, steps=3000):
+    global N, BOX_SIZE_0, pressure
+    N, BOX_SIZE_0, pressure = n, box, 0.0
+    ps = []
+    create_particles(particles)
+    for i in range(steps):
+        take_time_step(particles)
+        ps.append(pressure)
+    return np.array(ps[200:])   # inloop weg
 
+p40 = run(40, 10)
+p80 = run(80, 10 * np.sqrt(2))
+N, BOX_SIZE_0 = 40, 10   # terugzetten
 
+plt.figure()
+plt.hist(p40, bins=40, alpha=0.5, label='N=40')
+plt.hist(p80, bins=40, alpha=0.5, label='N=80')
+plt.xlabel('Pressure [a.u.]')
+plt.ylabel('Aantal')
+plt.legend()
+plt.show()
 
+rel40 = np.std(p40) / np.mean(p40)
+rel80 = np.std(p80) / np.mean(p80)
+print('relatieve breedte N=40:', rel40, ' N=80:', rel80, ' verhouding:', rel40 / rel80)
+# relatieve breedte ~ 1/sqrt(N)
+print('schatting N=1e23:', rel40 * np.sqrt(40 / 1e23))
 ```
 
-```python
-
-```
+Verwacht: $\sigma_P/P \propto 1/\sqrt N$, dus factor $\sqrt2 \approx 1.4$ smaller bij dubbel N. Gemeten ~1.2 (bij mij 0.58 → 0.50); minder omdat het voortschrijdend gemiddelde opeenvolgende waarden correleert en de run eindig is. Voor $10^{23}$ deeltjes geeft dat een relatieve variatie van orde $10^{-11}$: de druk van een echt gas is dus praktisch constant.
