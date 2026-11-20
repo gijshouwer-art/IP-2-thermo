@@ -81,7 +81,7 @@ Maak het tijdsinterval $dt$ groter en vergelijk de afgelegde weg in de tien seco
 ```
 
 
-De afstand wordt korter naarmate dt groter wordt. Dit komt doordat de sprongen korter worden en dus de nieuwe snelheid eerder begint
+Fietser 1 (constante snelheid) legt altijd 50 m af, ongeacht `dt`. Fietser 2 legt minder af naarmate `dt` groter wordt (`dt = 0.25`: 24.4 m, `dt = 1`: 22.5 m, exact is 25 m). Natuurkundig is dat niet logisch, de afstand hoort $\frac12 a t^2 = 25$ m te zijn. Het komt door de methode: per stap wordt de snelheid aan het begin van de stap gebruikt, terwijl de snelheid tijdens de stap toeneemt. Je onderschat de afstand dus elke stap, en dat effect is groter bij grotere `dt`.
 
 
 <!-- Jouw antwoord hier  -->
@@ -516,7 +516,6 @@ def update(frame):
         particle.r[1] = -10
     elif particle.r[1] < -10:
         particle.r[1] = 10
-### YOUR CODE HERE ###
 
     return dot,      
 ```
@@ -922,7 +921,10 @@ Nu je een beetje weet hoe een numeriek model werkt, hoe je boundaries kunt opgev
 ```
 
 ```{solution} ex-deeltjes_10
-Jouw antwoord.
+1. Botsing als de afstand tussen de middelpunten kleiner is dan de som van de stralen: $|\vec r_1 - \vec r_2| < R_1 + R_2$.
+2. Zie `collide_detection` hieronder: $dx^2 + dy^2 < (R_1+R_2)^2$ (kwadraten, dan is er geen wortel nodig).
+3. Bij gelijke massa's in 1D wisselen de deeltjes van snelheid.
+4. Wanden voor beide deeltjes in een loop over een lijst deeltjes in plaats van alles dubbel uitschrijven.
 ```
 
 ```python tags=["NB1_botsingsvoorwaarde"]
@@ -1005,13 +1007,12 @@ def update(frame):
     if particleA.r[1]**2>100: 
         particleA.v[1] = -particleA.v[1]
 
-    dot.set_data([particleB.r[0]], [particleB.r[1]])
     if particleB.r[0]**2>100: 
         particleB.v[0] = -particleB.v[0]
     if particleB.r[1]**2>100: 
         particleB.v[1] = -particleB.v[1]
 
-    return dot, track_line
+    return dotA, dotB, track_line
 
 # Creeer animatie
 ani = FuncAnimation(fig, update, frames=range(num_steps), init_func=init, blit=True, interval=50)
@@ -1075,7 +1076,7 @@ Wat is de beperkende factor in ons script om het aantal botsingen als functie va
 ```
 
 ```{solution} ex-deeltjes-12
-Bij massaverhouding van 10x zijn het aantal botsingen inderdaad de eerste getallen van /pi. Alleen bij een te grote dt en te veel botsingen na elkaar werkt de teller voor de botsingen soms niet snel genoeg.
+Bij massaverhouding $100^n$ geeft het aantal botsingen de eerste cijfers van $\pi$: 1 → 3, 100 → 31, 10000 → 314. De beperkende factor is de tijdstap `dt`: bij grote massaverhouding volgen de botsingen elkaar zo snel op dat er meerdere in één tijdstap zouden moeten gebeuren. Met `dt = 0.1` vind je bij 10000 maar 14 botsingen, met `dt = 0.01` wel 314. Kleinere `dt` kost wel meer rekentijd.
 ```
 
 
@@ -1138,51 +1139,20 @@ def update(frame):
     dotA.set_data([particleA.r[0]], [particleA.r[1]])
     dotB.set_data([particleB.r[0]], [particleB.r[1]])
 
-    # Botsing tussen de deeltjes
-    if particleA.collide_detection(particleB):
-        vA = particleA.v
-        vB = particleB.v
-        mA = particleA.m
-        mB = particleB.m
-        rA = particleA.r
-        rB = particleB.r
-
-        vA_new = (
-            vA
-            - 2 * mB / (mA + mB)
-            * np.dot(vA - vB, rA - rB)
-            / (1e-12 + np.linalg.norm(rA - rB))**2
-            * (rA - rB)
-        )
-
-        vB_new = (
-            vB
-            - 2 * mA / (mA + mB)
-            * np.dot(vB - vA, rB - rA)
-            / (1e-12 + np.linalg.norm(rB - rA))**2
-            * (rB - rA)
-        )
-
-        particleA.v = vA_new
-        particleB.v = vB_new
+    # Botsing tussen de deeltjes (alleen als ze naar elkaar toe bewegen)
+    mA, mB = particleA.m, particleB.m
+    d = particleA.r - particleB.r
+    dv = particleA.v - particleB.v
+    if particleA.collide_detection(particleB) and np.dot(dv, d) < 0:
+        k = np.dot(dv, d) / np.dot(d, d) * d
+        particleA.v = particleA.v - 2 * mB / (mA + mB) * k
+        particleB.v = particleB.v + 2 * mA / (mA + mB) * k
         counter += 1
 
-    # Botsing van particleA met de x-wand
-    if particleA.r[0]**2 > 100:
+    # Alleen een muur links (zoals in de video), alleen botsen als A naar de muur beweegt
+    if particleA.r[0] < -10 and particleA.v[0] < 0:
         particleA.v[0] = -particleA.v[0]
         counter += 1
-
-    # Botsing van particleA met de y-wand
-    if particleA.r[1]**2 > 100:
-        particleA.v[1] = -particleA.v[1]
-        counter += 1
-
-    # Botsingen van particleB met de wand
-    if particleB.r[0]**2 > 100:
-        particleB.v[0] = -particleB.v[0]
-
-    if particleB.r[1]**2 > 100:
-        particleB.v[1] = -particleB.v[1]
 
     # Counter na de botsingen bijwerken
     counter_text.set_text(f"Collisions: {counter}")
@@ -1209,8 +1179,9 @@ Pas de bovenstaande code aan zodat $m_1 = 1$ en $m_2 = 50$. Run de code en geef 
 
 ```python tags=["NB1_eindantwoord"]
 num_botsingen = 22
-### YOUR CODE HERE ###
 ```
+
+Klopt met de theorie: aantal botsingen $= \lceil \pi / \arctan\sqrt{m_1/m_2} \rceil - 1 = 22$. Daarvoor moesten twee dingen aangepast worden: alleen botsen als de deeltjes naar elkaar toe bewegen (anders telt één botsing meerdere keren) en alleen een muur links (anders komt B terug).
 
 ```{exercise}
 Klaar? Bekijk de twee versies, kies de beste en doe een `Pull Request` naar `Main`. Je partner reviewt de code, doet eventueel suggesties. Je partner is ook degene die uiteindelijke  de Pull Request goed keurt.

@@ -190,7 +190,7 @@ Jouw antwoord hier...
 ```python tags=["NB2_init"] editable=true slideshow={"slide_type": ""}
 def create_particles(particles):
     ''' Leegmaken en opnieuw aanmaken van deeltjes '''
-    particles.clear
+    particles.clear()
     for i in range(N):
         vx = np.random.uniform(-V_0, V_0)
         vy = np.random.choice([-1, 1]) * np.sqrt(V_0**2 - vx**2)        
@@ -508,6 +508,8 @@ for i in range(N-1):
     pos = Box_length_0*np.random.uniform(-1,1,2)
     particles.append(ParticleClass(m=1.0, v=[vx, vy], r = pos, R=.5,c='blue')) 
 
+# Zwaar deeltje (m=20, 20x zo zwaar als de rest), stilstaand in het midden, rood.
+# Laatste in de lijst, dus terug te vinden als particles[N-1].
 particles.append(ParticleClass(m=20.0, v=[0, 0], r = [0, 0], R=.5,c='red')) 
 
 ```
@@ -520,7 +522,7 @@ Voeg voor deze regel goede metadata toe.
 ```
 
 ```{solution} ex-brownian-1
-### YOUR CODE HERE ###
+De laatste regel voegt één zwaar deeltje toe: massa 20 (de rest heeft massa 1), stilstaand ($v=0$), precies in het midden van de doos, met kleur rood. Omdat het als laatste wordt toegevoegd is het `particles[N-1]`, zo kunnen we het straks volgen. Als metadata is er commentaar boven de regel gezet.
 ```
 
 
@@ -543,9 +545,9 @@ plt.ylim(-Box_length_0,Box_length_0)
 
 for particle, particle_object in enumerate(particles):
     plt.plot(particle_object.r[0],particle_object.r[1],color=particle_object.c,marker='.')
-    # plt.arrow(particle_object.r[0],particle_object.r[1], 
-    #           particle_object.v[0],particle_object.v[1], 
-    #           head_width=0.05, head_length=0.1, color='red')
+    plt.arrow(particle_object.r[0],particle_object.r[1], 
+              particle_object.v[0],particle_object.v[1], 
+              head_width=0.05, head_length=0.1, color='red')
 plt.show()
 
 ```
@@ -559,7 +561,7 @@ Hoe wordt er voor gezorgd dat de snelheid van elk deeltje gelijk is?
 ```
 
 ```{solution} ex-brownian-2
-### YOUR CODE HERE ###
+De code met comments tekent bij elk deeltje een pijl in de richting van de snelheid (lengte = snelheid). Hierboven zijn de comments weggehaald, je ziet nu de pijlen. Alle pijlen zijn even lang (behalve het zware deeltje, dat stilstaat): $v_x$ wordt random gekozen tussen $-v_0$ en $v_0$ en daarna $v_y = \pm\sqrt{v_0^2 - v_x^2}$, dus altijd $|v| = \sqrt{v_x^2+v_y^2} = v_0$.
 ```
 
 We gaan nu de functies van de simulatie weer aanroepen:
@@ -588,15 +590,17 @@ def particle_collision(p1: ParticleClass, p2: ParticleClass):
     p1.v -= 2 * m2 / (m1 + m2) * dot_product / distance_squared * delta_r
     p2.v += 2 * m1 / (m1 + m2) * dot_product / distance_squared * delta_r
 
+counter = 0
+
 def handle_collisions(particles):
-    ### YOUR CODE HERE ###
     """ alle onderlinge botsingen afhandelen voor deeltjes in lijst """
+    global counter   # aantal botsingen in deze tijdstap
     num_particles = len(particles)
     for i in range(num_particles):
         for j in range(i+1, num_particles):
             if collide_detection(particles[i], particles[j]):
                 particle_collision(particles[i], particles[j])
-                ### YOUR CODE HERE ###
+                counter += 1
 
 ```
 
@@ -607,12 +611,12 @@ In onderstaande code geven we de code voor de simulatie en volgen we de positie 
 track_x = []
 track_y = []
 
-### YOUR CODE HERE ###
-
-### YOUR CODE HERE ###
+track_x2 = []    # licht deeltje
+track_y2 = []
+botsingen = []   # aantal botsingen per tijdstap
 
 for i in range(400):
-    ### YOUR CODE HERE ###
+    counter = 0
     
     for p in particles:        
         p.update_position()    # Update positie        
@@ -620,16 +624,22 @@ for i in range(400):
         
     handle_collisions(particles)
 
-    ### YOUR CODE HERE ###
+    botsingen.append(counter)
     
     track_x.append(particles[N-1].r[0])
     track_y.append(particles[N-1].r[1])
-    
-### YOUR CODE HERE ###
+    track_x2.append(particles[0].r[0])
+    track_y2.append(particles[0].r[1])
 
 plt.figure()
-plt.plot(track_x,track_y,'r')
-### YOUR CODE HERE ###
+plt.plot(track_x,track_y,'r', label='zwaar deeltje')
+plt.plot(track_x2,track_y2,'b', alpha=0.5, label='licht deeltje')
+plt.xlim(-Box_length_0, Box_length_0)
+plt.ylim(-Box_length_0, Box_length_0)
+plt.gca().set_aspect('equal')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
 plt.show()
 ```
 
@@ -673,6 +683,7 @@ def init():
     return dots, heavy_dot, light_dot, heavy_path, light_path
 
 def update(frame):
+    global counter
     counter = 0
 
     for p in particles:
@@ -728,7 +739,10 @@ ani.save("deeltjes.gif", writer="pillow", fps=20)
 ```
 
 ```{solution} ex-brownian-3
-### YOUR CODE HERE ###
+- Tweede tracking (licht deeltje, blauw) is toegevoegd in de cel met de 400 tijdstappen, met legenda, assen en gelijke schaal.
+- Overeenkomst: beide bewegen in rechte stukken met plotselinge knikken bij een botsing.
+- Verschil: het lichte deeltje beweegt snel en schiet door de hele doos, met grote knikken en botsingen met de wand. Het zware deeltje beweegt langzaam en krijgt bij elke botsing maar een klein duwtje, dus het maakt een kort, kronkelig pad rond het midden: Brownian motion.
+- Bij elke run is het pad anders (random beginposities en -snelheden), maar het patroon is hetzelfde: het zware deeltje kruipt willekeurig rond, het lichte vliegt alle kanten op.
 ```
 
 
@@ -741,8 +755,16 @@ Pas bovenstaand idee toe in de eerder gemaakte code.
 Plot hieronder het aantal botsingen als functie van de tijd.
 ```
 
+De counter staat in `handle_collisions` (`counter += 1` per botsing) en wordt elke tijdstap op 0 gezet en opgeslagen in `botsingen` (zie de cel met de 400 tijdstappen).
+
 ```python
-### YOUR CODE HERE ###
+plt.figure()
+plt.plot(np.arange(len(botsingen)) * dt, botsingen, '.-')
+plt.xlabel('tijd')
+plt.ylabel('aantal botsingen per tijdstap')
+plt.show()
+
+print('gemiddeld', np.mean(botsingen), 'botsingen per tijdstap')
 ```
 
 ```{warning} 🌶 Let op!
@@ -767,10 +789,46 @@ Maar voor een histogram hebben we veel deeltjes nodig.
 ```
 
 
-```python tags=["NB2_brownian_distance_histogram"] editable=true slideshow={"slide_type": ""}
-### YOUR CODE HERE ###
+Box meeschalen: zelfde dichtheid als 40 deeltjes in een doos van 10x10, dus zijde $\times\sqrt{361/40} \approx 3$. De deeltjes zetten we op een rooster van 19x19 (= 361), zodat ze niet overlappen. Het zware deeltje zit in het midden.
 
+```python tags=["NB2_brownian_distance_histogram"] editable=true slideshow={"slide_type": ""}
+counter = 0
+N_hist = 361
+Box_length = np.sqrt(N_hist / 40) * Box_length_0     # ~15, box meeschalen
+grid = -Box_length + 2 * Box_length / 19 * (np.arange(19) + 0.5)
+
+big = []
+for i in range(19):
+    for j in range(19):
+        if i == 9 and j == 9:
+            continue                                  # midden is voor het zware deeltje
+        angle = np.random.uniform(0, 2 * np.pi)
+        big.append(ParticleClass(m=1.0, v=v_0 * np.array([np.cos(angle), np.sin(angle)]),
+                                 r=[grid[i], grid[j]], R=.5, c='blue'))
+big.append(ParticleClass(m=20.0, v=[0, 0], r=[0, 0], R=.5, c='red'))   # zwaar deeltje, laatste
+
+start = np.array([p.r.copy() for p in big])
+for step in range(400):
+    for p in big:
+        p.update_position()
+        p.boxcollision()
+    handle_collisions(big)
+end = np.array([p.r for p in big])
+
+distance = np.linalg.norm(end - start, axis=1)   # afgelegde weg (begin -> eind)
+
+plt.figure()
+plt.hist(distance[:-1], bins=30, label='lichte deeltjes')
+plt.axvline(distance[-1], color='r', lw=2, label='zwaar deeltje')
+plt.xlabel('afgelegde weg')
+plt.ylabel('aantal deeltjes')
+plt.legend()
+plt.show()
+
+Box_length = Box_length_0   # terugzetten
 ```
+
+Het zware deeltje komt veel minder ver dan bijna alle lichte deeltjes: het beweegt langzaam en wordt alle kanten op geduwd, dus het diffundeert langzaam.
 
 En nu we toch bezig zijn met twee verschillende deeltjes.... 
 
@@ -782,11 +840,46 @@ We kunnen twee "groepen" van deeltjes aanmaken, elk  met een andere massa. Als w
 - zet een artificieel grote zwaartekracht aan
 ```
 
-```python
-### YOUR CODE HERE ###
-
-```
+Box 10 breed en 20 hoog, 80 deeltjes: 40 licht ($m=1$, blauw) en 40 zwaar ($m=5$, rood). Elke tijdstap krijgen alle deeltjes $v_y \to v_y - g\,dt$. We volgen de gemiddelde hoogte van beide groepen.
 
 ```python
+counter = 0
+W, H = 5, 10        # halve breedte en halve hoogte
+g = 0.1             # artificieel grote zwaartekracht
 
+mix = []
+for i in range(80):
+    m, c = (1.0, 'blue') if i < 40 else (5.0, 'red')
+    angle = np.random.uniform(0, 2 * np.pi)
+    pos = [np.random.uniform(-W + .5, W - .5), np.random.uniform(-H + .5, H - .5)]
+    mix.append(ParticleClass(m=m, v=v_0 * np.array([np.cos(angle), np.sin(angle)]), r=pos, R=.5, c=c))
+
+y_licht, y_zwaar = [], []
+for step in range(1500):
+    for p in mix:
+        p.v[1] -= g * dt
+        p.update_position()
+        for k, L in [(0, W), (1, H)]:              # harde wanden van de rechthoek
+            if abs(p.r[k]) + p.R > L:
+                p.v[k] = -p.v[k]
+                p.r[k] = np.sign(p.r[k]) * (L - p.R)
+    handle_collisions(mix)
+    y_licht.append(np.mean([p.r[1] for p in mix[:40]]))
+    y_zwaar.append(np.mean([p.r[1] for p in mix[40:]]))
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+ax1.plot(np.arange(1500) * dt, y_licht, 'b', label='licht (m=1)')
+ax1.plot(np.arange(1500) * dt, y_zwaar, 'r', label='zwaar (m=5)')
+ax1.set_xlabel('tijd')
+ax1.set_ylabel('gemiddelde hoogte')
+ax1.legend()
+for p in mix:
+    ax2.plot(p.r[0], p.r[1], 'o', color=p.c, ms=6)
+ax2.set_xlim(-W, W)
+ax2.set_ylim(-H, H)
+ax2.set_aspect('equal')
+ax2.set_title('eindsituatie')
+plt.show()
 ```
+
+Het vermoeden klopt: de zware deeltjes zakken naar de bodem en de lichte deeltjes "drijven" erboven. Door botsingen krijgen de deeltjes gemiddeld dezelfde kinetische energie, en een zwaar deeltje komt met diezelfde energie minder hoog ($mgh$ is groter).
