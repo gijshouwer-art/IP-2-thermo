@@ -48,7 +48,24 @@ Als model gaan we uit van een deel van het volume van een fietsband die onder ee
 ```
 
 ```{solution} ex-recap-1
-### YOUR CODE HERE ###
+Het is een ideaal gas dus $pV = Nk_B T$
+
+per molecuul krijg je dan:
+
+$$
+V_{\mathrm{molecuul}}
+= \frac{k_B T}{p}
+= \frac{1{,}38 \cdot 10^{-23} \cdot 293}{10 \cdot 10^5}
+= 4{,}0 \cdot 10^{-27}\,\mathrm{m^3}.
+$$
+
+De ribbe van de kubus is:
+
+$$
+\sqrt[3]{4{,}0 \cdot 10^{-27}}
+= 1{,}6 \cdot 10^{-9}\,\mathrm{m}
+= 1{,}6\,\mathrm{nm}.
+$$
 ```
 
 De simulatie die we gaan maken bevat maar twee dimensies. We kunnen het oppervlak per deeltje in deze simulatie daarom kiezen als het zojuist berekende $V_\text{molecuul}^{2/3}$.
@@ -68,7 +85,32 @@ Ook deze heb je hierna nodig.
 ```
 
 ```{solution} ex-recap-2
-### YOUR CODE HERE ###
+Met $f=2$:
+
+$$
+\frac{1}{2}m\langle v^2\rangle = k_B T
+\quad\Rightarrow\quad
+v = \sqrt{\frac{2k_B T}{m}}.
+$$
+
+de gemiddelde molecuulmassa is:
+
+$$
+m \approx 29\,\mathrm{u}
+= 29 \cdot 1{,}66 \cdot 10^{-27}
+= 4{,}8 \cdot 10^{-26}\,\mathrm{kg}.
+$$
+
+Bij $T=293\,\mathrm{K}$:
+
+$$
+v =
+\sqrt{
+\frac{2 \cdot 1{,}38 \cdot 10^{-23} \cdot 293}
+{4{,}8 \cdot 10^{-26}}
+}
+\approx 4{,}1 \cdot 10^2\,\mathrm{m/s}.
+$$
 ```
 
 ```{exercise} Radius
@@ -77,7 +119,23 @@ In de python cell hieronder staan enkele waarden gegeven. Het aantal deeltjes $N
 ```
 
 ```{solution} ex-recap-3
-### YOUR CODE HERE ###
+De doos is $10 * 10 = 100$ eenheden$^2$ voor $N=40$ deeltjes dus:
+
+$$
+V_{\mathrm{molecuul}}^{2/3}
+= (1{,}6\,\mathrm{nm})^2
+\approx 2{,}6\,\mathrm{nm}^2.
+$$
+
+
+RADIUS = 0.3 komt dan overeen bij $0{,}3\,\mathrm{nm}$. Dit komt redelijk overeen met een $\mathrm{N_2/O_2}$-molecuul, die hebben een (straal $\approx 0{,}15$–$0{,}2\,\mathrm{nm}$), dus een redelijke keuze.
+
+V_0 = 1 staat voor $\approx 4 \cdot 10^2\,\mathrm{m/s}$, dus één tijdseenheid is
+
+$$
+\frac{1\,\mathrm{nm}}{400\,\mathrm{m/s}}
+= 2{,}5\,\mathrm{ps}.
+$$
 ```
 
 ```{exercise} DT
@@ -88,11 +146,13 @@ Bekijk de waarde van `DT`. Hoe zorgt deze waaarde ervoor dat het onwaarschijnlij
 Onze simulatie modelleert dus een klein systeem zonder rekening te houden met de kracht tussen de luchtmoleculen. Je zult zien dat we toch al behoorlijk wat van de processor vragen om deze berekeningen te doen. Om een meer realistische modelsimulatie te maken is daarom een serieuze uitdaging, die veel wiskunde en programmeerervaring vraagt. Op dit ogenblik wordt dit bijvoorbeeld gevraagd bij een van de eerste opdrachten van het vak 'Computational Physics' van de master Applied Physics. 
 
 ```python tags=["NB2_init"] editable=true slideshow={"slide_type": ""}
-BOX_SIZE_0 = 10                # Hoogte en lengte startvolume
-N = 40                         # Aantal deeltjes
-V_0 = 1                        # Startsnelheid van deeltjes
-RADIUS = 0.3                   # Straal van moleculen
-DT = 0.1 * RADIUS / V_0        # Tijdstap om geen botsing te missen
+# Het deeltje moet per waarde DT een kleine afstand moet afleggen t.o.v. zijn eigen lengte, dus DT = 0.1*RADIUS/V_0 geeft een tiende
+
+BOX_SIZE_0 = 10                # Hoogte en lengte startvolume       [nm]
+N = 40                         # Aantal deeltjes                    [geen eenheid]
+V_0 = 1                        # Startsnelheid van deeltjes         [m/s]
+RADIUS = 0.3                   # Straal van moleculen               [nm]
+DT = 0.1 * RADIUS / V_0        # Tijdstap om geen botsing te missen [ps]
 ```
 
 ### Particle class
@@ -184,8 +244,15 @@ Leg uit dat d.m.v. onderstaande code de deeltjes allemaal dezelfde snelheid hebb
 
 ```{solution} ex-recap-5
 Jouw antwoord hier...
-### YOUR CODE HERE ###
-```
+Snelheid: $v_x$ wordt random uniform gekozen tussen $(-V_0,V_0)$ daarmee wordt $v_y = \pm\sqrt{V_0^2-v_x^2}$ bepaald.
+
+Dan wordt $|\vec{v}|=\sqrt{v_x^2+v_y^2}=V_0$ gebruikt.
+
+Alle deeltjes dan hebben dus precies dezelfde snelheid maar weel een andere richting. Het teken van $v_y$ wordt willekeurig gekozen met np.random.choice([-1, 1]).
+
+Positie: np.random.uniform(-BOX_SIZE_0/2 + RADIUS, BOX_SIZE_0/2 - RADIUS, 2) kiest $x$ en $y$ random onafhankelijk en uniform. De deeltjes worden binnen de doos geplaatst, op minstens straal afstand van de wand.
+
+De deeltjes zijn dus uniform over de doos verdeeld.```
 
 ```python tags=["NB2_init"] editable=true slideshow={"slide_type": ""}
 def create_particles(particles):
@@ -210,7 +277,11 @@ Leg uit hoe er in onderstaande code wordt voorkomen dat de botsing tussen twee d
 
 ```{solution} ex-recap-6
 Jouw antwoord hier...
-### YOUR CODE HERE ###
+De binnenste loop begint bij j = i + 1, en loopt door tot het totale aantal deeltjes. Elk paar van $(i,j)$ komt daardoor precies één keer voorbij in beide loops, en $i<j$.
+
+Het paar $(j,i)$ wordt niet opnieuw bekeken en een deeltje wordt niet met zichzelf vergeleken. Het totale aantal controles is daarom: $\frac{N(N-1)}{2}.$
+Daarnaast zorgt collide_detection ervoor dat geen botsing plaatsvinden als de deeltjes al van elkaar af bewegen:
+if collide_detection(...)
 ```
 
 ```python editable=true slideshow={"slide_type": ""} tags=["NB2_init"]
@@ -319,10 +390,19 @@ create_particles(particles)
 for i in range(100):
     take_time_step(particles)
     # voeg de som van de kinetische energie in deze stap toe aan energy_tot 
-    ### YOUR CODE HERE ###
+    energy_tot.append(sum(p.kin_energy for p in particles))
 
 # plot de figuur van de kinetische energie als functie van de tijd. 
 ### YOUR CODE HERE ###
+t = np.arange(1, len(energy_tot) + 1) * DT
+plt.figure()
+plt.plot(t, energy_tot, 'k.-')
+plt.xlabel('$t$ (eenheden)')
+plt.ylabel('$E_{kin,tot}$ (eenheden)')
+plt.show()
+
+E_afwijking = max(energy_tot) - min(energy_tot)
+print(f"E_tot = {energy_tot[0]:.15f}, max - min = {E_afwijking:.1e}")
 ```
 
 ```{exercise} 
@@ -332,8 +412,7 @@ Als je heel nauwkeurig naar de waarde voor de totale kinetische energie kijkt, d
 
 ```{solution} ex-recap-8
 Jouw antwoord hier...
-### YOUR CODE HERE ###
-```
+De variatie is vele male kleiner dan de energie (E_tot). De variatie kan verklaard worden door afrondingsfouten. Natuurkundig gezien is er geen energieverlies omdat het om elastische botstingen gaat```
 
 
 Voor simulaties waarbij de kans op botsingen heel groot is (richting vloeistof), is er een handige methode om de snelheid van je simulatie op te voeren.
