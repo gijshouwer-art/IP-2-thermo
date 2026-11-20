@@ -238,6 +238,12 @@ Gebruik deze functie om een simulatie te maken waarin je de temperatuur als func
 ```python tags=["NB3_check_const_temp"]
 # ruimte voor uitwerking
 
+# omrekenfactoren naar SI (zie opgave 3)
+k_B = 1.380649e-23
+M_UNIT = 28 * 1.66e-27                       # kg (N2)
+V_UNIT = np.sqrt(2 * k_B * 293 / M_UNIT)     # m/s, ~417
+E_UNIT = M_UNIT * V_UNIT**2                  # J
+
 particles = []
 temperatures = np.zeros(100, dtype=float)
 times = np.linspace(1, 100, 100)
@@ -246,11 +252,11 @@ create_particles(particles)
 for i in range(100):
     take_time_step(particles)
     # vastleggen van temperatuur per tijdstap
-    temperatures[i] = temperature(particles)
+    temperatures[i] = temperature(particles) * E_UNIT / k_B   # in K
 
 plt.figure()
 plt.xlabel('Time')
-plt.ylabel('Temperature')
+plt.ylabel('Temperature [K]')
 # plotten van tijd tegen temperatuur
 plt.plot(times, temperatures)
 plt.show()
@@ -271,17 +277,13 @@ In een vorige module heb je de vermenigvuldigingsfactoren en eenheden bij de con
 Schaalfactoren uit NB2: oppervlak per deeltje $(1.6\,\mathrm{nm})^2$ en 100/40 = 2.5 eenheden$^2$ per deeltje, dus 1 lengte-eenheid ≈ 1 nm. Snelheid: $v=\sqrt{2kT/m}\approx 4\cdot10^2$ m/s voor N$_2$ bij 293 K. Massa: 1 N$_2$-molecuul.
 
 ```python
-k_B = 1.380649e-23
-M_UNIT = 28 * 1.66e-27          # kg (N2)
-V_UNIT = np.sqrt(2 * k_B * 293 / M_UNIT)  # m/s, ~417
 L_UNIT = 1.6e-9 / np.sqrt(BOX_SIZE_0**2 / N)  # m, ~1 nm
 T_UNIT = L_UNIT / V_UNIT        # s per tijdeenheid
-E_UNIT = M_UNIT * V_UNIT**2     # J
 
 plt.figure()
 plt.xlabel('Tijd [ps]')
 plt.ylabel('Temperatuur [K]')
-plt.plot(times * DT * T_UNIT * 1e12, temperatures * E_UNIT / k_B)
+plt.plot(times * DT * T_UNIT * 1e12, temperatures)
 plt.show()
 ```
 
